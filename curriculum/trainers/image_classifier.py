@@ -69,6 +69,7 @@ class ImageClassifier():
         else: print('The directory %s has already existed.' % (self.log_dir))
 
         self.log_interval = 1
+        self.batch_log_interval = 50
         self.logger = get_logger(os.path.join(self.log_dir, 'train.log'), log_info)
         
 
@@ -85,6 +86,7 @@ class ImageClassifier():
             net = self.model_curriculum(self.net)               # curriculum part
 
             net.train()
+            num_steps = len(loader)
             for step, data in enumerate(loader):
                 inputs = data[0].to(self.device)
                 labels = data[1].to(self.device)
@@ -101,6 +103,17 @@ class ImageClassifier():
                 _, predicted = outputs.max(dim=1)
                 correct += predicted.eq(labels).sum().item()
                 total += labels.shape[0]
+
+                if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
+                    elapsed = time.time() - t
+                    steps_done = step + 1
+                    eta = 0.0
+                    if steps_done > 0:
+                        eta = elapsed / steps_done * (num_steps - steps_done)
+                    self.logger.info(
+                        '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f  Elapsed = %.2f  ETA = %.2f'
+                        % (epoch + 1, steps_done, num_steps,
+                           correct / total, train_loss / steps_done, elapsed, eta))
             
             self.lr_scheduler.step()
             self.logger.info(
