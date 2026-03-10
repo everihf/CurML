@@ -102,15 +102,13 @@ class ImageClassifier():
                 total += labels.shape[0]
 
                 if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
-                    elapsed = time.time() - t
+                    
                     steps_done = step + 1
-                    eta = 0.0
-                    if steps_done > 0:
-                        eta = elapsed / steps_done * (num_steps - steps_done)
+                    
                     self.logger.info(
-                        '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f  Elapsed = %.2f  ETA = %.2f'
+                        '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
                         % (epoch + 1, steps_done, num_steps,
-                           correct / total, train_loss / steps_done, elapsed, eta))
+                           correct / total, train_loss / steps_done))
 
             self.lr_scheduler.step()
             self.logger.info(

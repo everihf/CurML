@@ -123,6 +123,7 @@ class Adaptive(BaseCL):
             current_difficulty = torch.cat((current_difficulty, loss), 0)
         
         self.difficulty = (1 - self.alpha) * self.difficulty + self.alpha * current_difficulty
+        #自适应更新难度！α=0.7
 
 
 class AdaptiveTrainer(BaseTrainer):

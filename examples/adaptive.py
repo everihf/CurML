@@ -36,6 +36,7 @@ def main() -> None:
         pretrainer.fit()
     pretrainer.evaluate(args.teacher_dir)
     teacher_net = pretrainer.export(args.teacher_dir)
+    #预训练模型导出为teacher_net
 
     trainer = AdaptiveTrainer(
         data_name=args.data,
