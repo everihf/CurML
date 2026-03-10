@@ -7,10 +7,9 @@ from ..backbones import get_net
 from ..utils import get_logger, set_random
 
 
-
 class ImageClassifier():
     def __init__(self, data_name, net_name, device_name, num_epochs, random_seed,
-                 algorithm_name, data_prepare, model_prepare, data_curriculum, 
+                 algorithm_name, data_prepare, model_prepare, data_curriculum,
                  model_curriculum, loss_curriculum):
         self.random_seed = random_seed
         set_random(self.random_seed)
@@ -25,7 +24,6 @@ class ImageClassifier():
         self._init_model(data_name, net_name, device_name, num_epochs)
         self._init_logger(algorithm_name, data_name, net_name, num_epochs, random_seed)
 
-
     def _init_dataloader(self, data_name):
         train_dataset, valid_dataset, test_dataset = \
             get_dataset_with_noise('./data', data_name)
@@ -39,11 +37,10 @@ class ImageClassifier():
 
         self.data_prepare(self.train_loader)
 
-
     def _init_model(self, data_name, net_name, device_name, num_epochs):
         self.net = get_net(net_name, data_name)
         self.device = torch.device(device_name \
-            if torch.cuda.is_available() else 'cpu')
+                                       if torch.cuda.is_available() else 'cpu')
         self.net.to(self.device)
 
         self.epochs = num_epochs
@@ -54,23 +51,24 @@ class ImageClassifier():
             self.optimizer, T_max=self.epochs, eta_min=1e-6)
 
         self.model_prepare(
-            self.net, self.device, self.epochs, 
+            self.net, self.device, self.epochs,
             self.criterion, self.optimizer, self.lr_scheduler)
 
-    
-    def _init_logger(self, algorithm_name, data_name, 
+    def _init_logger(self, algorithm_name, data_name,
                      net_name, num_epochs, random_seed):
         log_info = '%s-%s-%s-%d-%d-%s' % (
             algorithm_name, data_name, net_name, num_epochs, random_seed,
             time.strftime('%Y-%m-%d-%H-%M-%S', time.localtime()))
         self.log_dir = os.path.join('./runs', log_info)
         if not os.path.exists('./runs'): os.mkdir('./runs')
-        if not os.path.exists(self.log_dir): os.mkdir(self.log_dir)
-        else: print('The directory %s has already existed.' % (self.log_dir))
+        if not os.path.exists(self.log_dir):
+            os.mkdir(self.log_dir)
+        else:
+            print('The directory %s has already existed.' % (self.log_dir))
 
         self.log_interval = 1
+        self.batch_log_interval = 50
         self.logger = get_logger(os.path.join(self.log_dir, 'train.log'), log_info)
-        
 
     def _train(self):
         best_acc = 0.0
@@ -81,10 +79,11 @@ class ImageClassifier():
             correct = 0
             train_loss = 0.0
 
-            loader = self.data_curriculum(self.train_loader)    # curriculum part
-            net = self.model_curriculum(self.net)               # curriculum part
+            loader = self.data_curriculum(self.train_loader)  # curriculum part
+            net = self.model_curriculum(self.net)  # curriculum part
 
             net.train()
+            num_steps = len(loader)
             for step, data in enumerate(loader):
                 inputs = data[0].to(self.device)
                 labels = data[1].to(self.device)
@@ -92,7 +91,7 @@ class ImageClassifier():
 
                 self.optimizer.zero_grad()
                 outputs = net(inputs)
-                loss = self.loss_curriculum(                    # curriculum part
+                loss = self.loss_curriculum(  # curriculum part
                     self.criterion, outputs, labels, indices)
                 loss.backward()
                 self.optimizer.step()
@@ -101,7 +100,18 @@ class ImageClassifier():
                 _, predicted = outputs.max(dim=1)
                 correct += predicted.eq(labels).sum().item()
                 total += labels.shape[0]
-            
+
+                if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
+                    elapsed = time.time() - t
+                    steps_done = step + 1
+                    eta = 0.0
+                    if steps_done > 0:
+                        eta = elapsed / steps_done * (num_steps - steps_done)
+                    self.logger.info(
+                        '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f  Elapsed = %.2f  ETA = %.2f'
+                        % (epoch + 1, steps_done, num_steps,
+                           correct / total, train_loss / steps_done, elapsed, eta))
+
             self.lr_scheduler.step()
             self.logger.info(
                 '[%3d]  Train data = %6d  Train Acc = %.4f  Loss = %.4f  Time = %.2f'
@@ -113,9 +123,8 @@ class ImageClassifier():
                     best_acc = valid_acc
                     torch.save(net.state_dict(), os.path.join(self.log_dir, 'net.pkl'))
                 self.logger.info(
-                    '[%3d]  Valid data = %6d  Valid Acc = %.4f' 
+                    '[%3d]  Valid data = %6d  Valid Acc = %.4f'
                     % (epoch + 1, len(self.valid_loader.dataset), valid_acc))
-            
 
     def _valid(self, loader):
         total = 0
@@ -133,11 +142,9 @@ class ImageClassifier():
                 correct += predicted.eq(labels).sum().item()
         return correct / total
 
-
     def fit(self):
         set_random(self.random_seed)
         self._train()
-
 
     def evaluate(self, net_dir=None):
         self._load_best_net(net_dir)
@@ -146,11 +153,9 @@ class ImageClassifier():
         self.logger.info('Best Valid Acc = %.4f and Final Test Acc = %.4f' % (valid_acc, test_acc))
         return test_acc
 
-
     def export(self, net_dir=None):
         self._load_best_net(net_dir)
         return self.net
-
 
     def _load_best_net(self, net_dir):
         if net_dir is None: net_dir = self.log_dir

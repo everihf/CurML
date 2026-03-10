@@ -63,6 +63,7 @@ class Adaptive(BaseCL):
 
         self.epoch_size = self.data_size * min(self.pace_p * (self.pace_q ** int(math.floor(self.epoch / self.pace_r))), 1)
         self.epoch_size = int(self.epoch_size)
+        #扩张公式
         data_sort = torch.argsort(self.difficulty)
         self.data_indice = data_sort[0 : self.epoch_size]
         dataset = Subset(self.dataset, self.data_indice)
@@ -84,11 +85,16 @@ class Adaptive(BaseCL):
         for indice in self.data_indice[self.cnt : (self.cnt + self.batch_size)]:
             epoch_pretrained_output = torch.cat((epoch_pretrained_output, self.pretrained_output[int(indice)]), 0)
         epoch_pretrained_output = epoch_pretrained_output.view(-1, 10)
+        #这里是把类别数定为10！其他类别数会不匹配！
+
         epoch_pretrained_output = F.softmax(epoch_pretrained_output, dim=1)
 
         output = F.softmax(outputs, dim=1)
         kl_divergence = self.KLloss(output, epoch_pretrained_output)
+
         losses = losses + self.gamma * kl_divergence
+        #目标函数：减少损失和增加与预训练模型输出的相似度（蒸馏）！！！
+        #原文这里是L不是γ！
         self.cnt += self.batch_size
         return losses      
 
