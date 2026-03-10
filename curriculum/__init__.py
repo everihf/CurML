@@ -1,0 +1,2 @@
+"""Curriculum Machine Learning package."""
+
