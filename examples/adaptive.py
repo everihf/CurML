@@ -3,7 +3,7 @@ import argparse
 from curriculum.algorithms import \
     BaseTrainer, AdaptiveTrainer
 
-
+#test yes!
 
 def main() -> None:
     parser = argparse.ArgumentParser()
