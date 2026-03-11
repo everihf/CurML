@@ -47,8 +47,10 @@ class ImageClassifier():
         self.criterion = torch.nn.CrossEntropyLoss(reduction='none')
         self.optimizer = torch.optim.SGD(
             self.net.parameters(), lr=0.1, momentum=0.9, weight_decay=5e-4)
+        #学习率，动量，权重衰减
         self.lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
             self.optimizer, T_max=self.epochs, eta_min=1e-6)
+        #余弦退火学习率（Cosine Annealing）/T_max=self.epochs:退火周期，这里是整个训练过程下降一次/eta_min最小学习率：0.000001，避免学习率降到 0。
 
         self.model_prepare(
             self.net, self.device, self.epochs,

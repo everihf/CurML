@@ -22,7 +22,7 @@ from .dla_simple import *
 from .dla import *
 
 
-
+#不同网络模型对应的名称！
 def get_net(net_name, data_name):
     net_dict = {
         'convnet': ConvNet,
