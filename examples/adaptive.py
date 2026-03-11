@@ -14,6 +14,7 @@ def main() -> None:
     parser.add_argument('--epochs', type=int, default=200)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--num_classes', type=int, default=10)
+    
     parser.add_argument('--pace_p', type=float, default=0.1)
     parser.add_argument('--pace_q', type=float, default=1.2)
     parser.add_argument('--pace_r', type=int, default=15)
