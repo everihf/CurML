@@ -63,7 +63,6 @@ class Adaptive(BaseCL):
             self.pace_p * (self.pace_q ** int(math.floor(self.batch / self.pace_r))),
             1)
         self.epoch_size = int(self.epoch_size)
-        self.epoch_size = max(self.epoch_size, self.batch_size)
         #扩张公式
         data_sort = torch.argsort(self.difficulty)
         self.data_indice = data_sort[0 : self.epoch_size]
