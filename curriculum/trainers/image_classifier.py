@@ -87,10 +87,16 @@ class ImageClassifier():
             net = self.model_curriculum(self.net)  # curriculum part
             net.train()
 
+            steps_done_epoch = 0
             if self.algorithm_name == 'adaptive':
-                num_steps = len(self.train_loader)
-                for step in range(num_steps):
+                step = 0
+                num_steps = 0
+                while True:
                     loader = self.data_curriculum(self.train_loader)  # curriculum part
+                    num_steps = len(loader)
+                    if step >= num_steps:
+                        break
+
                     data = next(iter(loader))
                     inputs = data[0].to(self.device)
                     labels = data[1].to(self.device)
@@ -107,9 +113,11 @@ class ImageClassifier():
                     _, predicted = outputs.max(dim=1)
                     correct += predicted.eq(labels).sum().item()
                     total += labels.shape[0]
+                    step += 1
+                    steps_done_epoch = step
 
-                    if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
-                        steps_done = step + 1
+                    if step % self.batch_log_interval == 0 or step == num_steps:
+                        steps_done = step
                         self.logger.info(
                             '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
                             % (epoch + 1, steps_done, num_steps,
@@ -134,6 +142,8 @@ class ImageClassifier():
                     correct += predicted.eq(labels).sum().item()
                     total += labels.shape[0]
 
+                    steps_done_epoch = step + 1
+
                     if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
                         steps_done = step + 1
                         self.logger.info(
@@ -144,7 +154,7 @@ class ImageClassifier():
             self.lr_scheduler.step()
             self.logger.info(
                 '[%3d]  Train data = %6d  Train Acc = %.4f  Loss = %.4f  Time = %.2f'
-                % (epoch + 1, total, correct / total, train_loss / (step + 1), time.time() - t))
+                % (epoch + 1, total, correct / total, train_loss / max(steps_done_epoch, 1), time.time() - t))
 
             if (epoch + 1) % self.log_interval == 0:
                 valid_acc = self._valid(self.valid_loader)
