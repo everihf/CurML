@@ -18,11 +18,11 @@ class Adaptive(BaseCL):
         self.name = 'adaptive'
 
         self.epoch = 0
+        self.batch = 0
         self.pace_p = pace_p
         self.epoch_size = pace_p
         self.pace_q = pace_q
         self.pace_r = pace_r
-        self.cnt = 0
         self.inv = inv
         self.alpha = alpha
         self.gamma = gamma
@@ -48,7 +48,7 @@ class Adaptive(BaseCL):
     
 
     def data_curriculum(self, loader):
-        if self.epoch == 0:
+        if self.epoch == 0 and self.batch == 0:
             self.pretrained_model.to(self.device)
             self.difficulty = torch.Tensor().to(self.device)
             self.pretrained_output = torch.Tensor().to(self.device)
@@ -58,18 +58,23 @@ class Adaptive(BaseCL):
             self._set_initial_difficulty()
             self.pretrained_difficulty = self.difficulty
 
-        self.epoch += 1
-        self.cnt = 0
 
-        self.epoch_size = self.data_size * min(self.pace_p * (self.pace_q ** int(math.floor(self.epoch / self.pace_r))), 1)
+        self.epoch_size = self.data_size * min(
+            self.pace_p * (self.pace_q ** int(math.floor(self.batch / self.pace_r))),
+            1)
         self.epoch_size = int(self.epoch_size)
+        self.epoch_size = max(self.epoch_size, self.batch_size)
         #扩张公式
         data_sort = torch.argsort(self.difficulty)
         self.data_indice = data_sort[0 : self.epoch_size]
         dataset = Subset(self.dataset, self.data_indice)
-        dataloader = DataLoader(dataset, self.batch_size, shuffle=False)
+        dataloader = DataLoader(dataset, self.batch_size, shuffle=True)
 
-        if self.epoch % self.inv == 0:
+        self.batch += 1
+        if self.batch % self.n_batches == 0:
+            self.epoch += 1
+
+        if self.batch % self.inv == 0:
             self._difficulty_measurer()
 
             # gradually reduce gamma which is the balancing parameter controling how much the knowledge learned from the pretrained model
@@ -81,11 +86,8 @@ class Adaptive(BaseCL):
     
     def loss_curriculum(self, criterion, outputs, labels, indices):
         losses = torch.mean(criterion(outputs, labels))
-        epoch_pretrained_output = torch.Tensor().to(self.device)
-        for indice in self.data_indice[self.cnt : (self.cnt + self.batch_size)]:
-            epoch_pretrained_output = torch.cat((epoch_pretrained_output, self.pretrained_output[int(indice)]), 0)
-        epoch_pretrained_output = epoch_pretrained_output.view(-1, 10)
-        #这里是把类别数定为10！其他类别数会不匹配！
+        epoch_pretrained_output = self.pretrained_output[indices.long()]
+        epoch_pretrained_output = epoch_pretrained_output.view(-1, self.num_classes)
 
         epoch_pretrained_output = F.softmax(epoch_pretrained_output, dim=1)
 
@@ -95,7 +97,6 @@ class Adaptive(BaseCL):
         losses = losses + self.gamma * kl_divergence
         #目标函数：减少损失和增加与预训练模型输出的相似度（蒸馏）！！！
         #原文这里是L不是γ！
-        self.cnt += self.batch_size
         return losses      
 
 
@@ -136,4 +137,3 @@ class AdaptiveTrainer(BaseTrainer):
 
         super(AdaptiveTrainer, self).__init__(
             data_name, net_name, device_name, num_epochs, random_seed, cl)
-
