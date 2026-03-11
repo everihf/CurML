@@ -22,8 +22,8 @@ def main() -> None:
     #
     parser.add_argument('--alpha', type=float, default=-0.01)
     #
-    parser.add_argument('--gamma', type=float, default=0.1)
-    #
+    parser.add_argument('--gamma', type=float, default=0.01)
+    #之前默认是0.1，但是ACL论文推荐0.01
     parser.add_argument('--gamma_decay', type=float, default=None)
     parser.add_argument('--bottom_gamma', type=float, default=0.1)
     parser.add_argument('--teacher_dir', type=str, default='runs/teacher_model')
