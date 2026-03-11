@@ -25,6 +25,7 @@ class ImageClassifier():
         self._init_logger(algorithm_name, data_name, net_name, num_epochs, random_seed)
 
     def _init_dataloader(self, data_name):
+        #数据集：训练集，验证集，测试集
         train_dataset, valid_dataset, test_dataset = \
             get_dataset_with_noise('./data', data_name)
 
