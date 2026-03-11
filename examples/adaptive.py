@@ -16,12 +16,16 @@ def main() -> None:
     parser.add_argument('--pace_p', type=float, default=0.1)
     parser.add_argument('--pace_q', type=float, default=1.2)
     parser.add_argument('--pace_r', type=int, default=15)
-    parser.add_argument('--inv', type=int, default=20)
-    parser.add_argument('--alpha', type=float, default=0.7)
+    parser.add_argument('--inv', type=int, default=50)
+    #
+    parser.add_argument('--alpha', type=float, default=-0.01)
+    #
     parser.add_argument('--gamma', type=float, default=0.1)
+    #
     parser.add_argument('--gamma_decay', type=float, default=None)
     parser.add_argument('--bottom_gamma', type=float, default=0.1)
-    parser.add_argument('--teacher_dir', type=str, default=None)
+    parser.add_argument('--teacher_dir', type=str, default='runs/teacher_model')
+    #添加教师模型！
     args = parser.parse_args()
 
     pretrainer = BaseTrainer(
@@ -35,8 +39,9 @@ def main() -> None:
     if args.teacher_dir is None:
         pretrainer.fit()
     pretrainer.evaluate(args.teacher_dir)
+
     teacher_net = pretrainer.export(args.teacher_dir)
-    #预训练模型导出为teacher_net
+    #将该文件夹下的预训练模型导出为teacher_net
 
     trainer = AdaptiveTrainer(
         data_name=args.data,
