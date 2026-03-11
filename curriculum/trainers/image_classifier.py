@@ -30,7 +30,6 @@ class ImageClassifier():
 
         self.train_loader = torch.utils.data.DataLoader(
             train_dataset, batch_size=100, shuffle=True, num_workers=8, pin_memory=True)
-        print("train num_workers =", self.train_loader.num_workers)
 
         self.valid_loader = torch.utils.data.DataLoader(
             valid_dataset, batch_size=100, shuffle=False, num_workers=8, pin_memory=True)
@@ -147,7 +146,7 @@ class ImageClassifier():
     def fit(self):
         set_random(self.random_seed)
         self._train()
-
+#评估：验证集，测试集
     def evaluate(self, net_dir=None):
         self._load_best_net(net_dir)
         valid_acc = self._valid(self.valid_loader)
