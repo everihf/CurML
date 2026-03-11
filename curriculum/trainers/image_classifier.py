@@ -14,6 +14,7 @@ class ImageClassifier():
         self.random_seed = random_seed
         set_random(self.random_seed)
 
+        self.algorithm_name = algorithm_name
         self.data_prepare = data_prepare
         self.model_prepare = model_prepare
         self.data_curriculum = data_curriculum
@@ -83,36 +84,62 @@ class ImageClassifier():
             correct = 0
             train_loss = 0.0
 
-            loader = self.data_curriculum(self.train_loader)  # curriculum part
             net = self.model_curriculum(self.net)  # curriculum part
-
             net.train()
-            num_steps = len(loader)
-            for step, data in enumerate(loader):
-                inputs = data[0].to(self.device)
-                labels = data[1].to(self.device)
-                indices = data[2].to(self.device)
 
-                self.optimizer.zero_grad()
-                outputs = net(inputs)
-                loss = self.loss_curriculum(  # curriculum part
-                    self.criterion, outputs, labels, indices)
-                loss.backward()
-                self.optimizer.step()
+            if self.algorithm_name == 'adaptive':
+                num_steps = len(self.train_loader)
+                for step in range(num_steps):
+                    loader = self.data_curriculum(self.train_loader)  # curriculum part
+                    data = next(iter(loader))
+                    inputs = data[0].to(self.device)
+                    labels = data[1].to(self.device)
+                    indices = data[2].to(self.device)
 
-                train_loss += loss.item()
-                _, predicted = outputs.max(dim=1)
-                correct += predicted.eq(labels).sum().item()
-                total += labels.shape[0]
+                    self.optimizer.zero_grad()
+                    outputs = net(inputs)
+                    loss = self.loss_curriculum(  # curriculum part
+                        self.criterion, outputs, labels, indices)
+                    loss.backward()
+                    self.optimizer.step()
 
-                if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
-                    
-                    steps_done = step + 1
-                    
-                    self.logger.info(
-                        '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
-                        % (epoch + 1, steps_done, num_steps,
-                           correct / total, train_loss / steps_done))
+                    train_loss += loss.item()
+                    _, predicted = outputs.max(dim=1)
+                    correct += predicted.eq(labels).sum().item()
+                    total += labels.shape[0]
+
+                    if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
+                        steps_done = step + 1
+                        self.logger.info(
+                            '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
+                            % (epoch + 1, steps_done, num_steps,
+                               correct / total, train_loss / steps_done))
+            else:
+                loader = self.data_curriculum(self.train_loader)  # curriculum part
+                num_steps = len(loader)
+                for step, data in enumerate(loader):
+                    inputs = data[0].to(self.device)
+                    labels = data[1].to(self.device)
+                    indices = data[2].to(self.device)
+
+                    self.optimizer.zero_grad()
+                    outputs = net(inputs)
+                    loss = self.loss_curriculum(  # curriculum part
+                        self.criterion, outputs, labels, indices)
+                    loss.backward()
+                    self.optimizer.step()
+
+                    train_loss += loss.item()
+                    _, predicted = outputs.max(dim=1)
+                    correct += predicted.eq(labels).sum().item()
+                    total += labels.shape[0]
+
+                    if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
+                        steps_done = step + 1
+                        self.logger.info(
+                            '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
+                            % (epoch + 1, steps_done, num_steps,
+                               correct / total, train_loss / steps_done))
 
             self.lr_scheduler.step()
             self.logger.info(
