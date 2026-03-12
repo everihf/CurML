@@ -190,4 +190,6 @@ class ImageClassifier():
         if net_dir is None: net_dir = self.log_dir
         net_file = os.path.join(net_dir, 'net.pkl')
         assert os.path.exists(net_file), 'Assert Error: the net file does not exist'
-        self.net.load_state_dict(torch.load(net_file))
+        # Load only tensor weights to avoid unsafe pickle deserialization.
+        state_dict = torch.load(net_file, map_location=self.device, weights_only=True)
+        self.net.load_state_dict(state_dict)
