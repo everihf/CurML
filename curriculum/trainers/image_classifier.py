@@ -77,7 +77,7 @@ class ImageClassifier():
 
     def _train(self):
         best_acc = 0.0
-
+        t0= time.time()
         for epoch in range(self.epochs):
             t = time.time()
             total = 0
@@ -91,10 +91,10 @@ class ImageClassifier():
             if self.algorithm_name == 'adaptive':
                 step = 0
                 num_steps = 0
-                while True:
+                while True:#因为adaptive下每个batch的训练集大小不一样，所以不能直接用for循环迭代训练集，而是用while循环，每个batch结束后重新计算训练集大小，并判断是否结束该epoch的训练
                     loader = self.data_curriculum(self.train_loader)  # curriculum part
-                    num_steps = len(loader)
-                    if step >= num_steps:
+                    num_steps = len(loader)#该epoch的训练集大小，课程学习的epoch不一定是全训练集！
+                    if step >= num_steps:#如果当前batch的训练集大小已经超过了该epoch的训练集大小，就结束该epoch的训练，进入下一个epoch
                         break
 
                     data = next(iter(loader))
@@ -123,7 +123,7 @@ class ImageClassifier():
                             % (epoch + 1, steps_done, num_steps,
                                correct / total, train_loss / steps_done))
             else:
-                loader = self.data_curriculum(self.train_loader)  # curriculum part
+                loader = self.data_curriculum(self.train_loader)  # curriculum part #非adaptive算法每个epoch的训练集大小不变，可以直接用for循环迭代训练集
                 num_steps = len(loader)
                 for step, data in enumerate(loader):
                     inputs = data[0].to(self.device)
@@ -151,6 +151,7 @@ class ImageClassifier():
                             % (epoch + 1, steps_done, num_steps,
                                correct / total, train_loss / steps_done))
 
+            #每个epoch结束后更新学习率（cosine下降），并评估训练集损失，训练时间
             self.lr_scheduler.step()
             self.logger.info(
                 '[%3d]  Train data = %6d  Train Acc = %.4f  Loss = %.4f  Time = %.2f'
@@ -165,6 +166,8 @@ class ImageClassifier():
                 self.logger.info(
                     '[%3d]  Valid data = %6d  Valid Acc = %.4f'
                     % (epoch + 1, len(self.valid_loader.dataset), valid_acc))
+        total_time = time.time() - t0
+        self.logger.info('Training Finished. Total Time = %.2f' % (total_time))
 
     def _valid(self, loader):
         total = 0
@@ -181,10 +184,12 @@ class ImageClassifier():
                 total += labels.shape[0]
                 correct += predicted.eq(labels).sum().item()
         return correct / total
-
+    
+    #设置种子+训练模型
     def fit(self):
         set_random(self.random_seed)
         self._train()
+
     #评估：验证集，测试集
     def evaluate(self, net_dir=None):
         self._load_best_net(net_dir)
