@@ -73,6 +73,7 @@ class ImageClassifier():
 
         self.log_interval = 1
         self.batch_log_interval = 50
+        #每训练50个batch记录一次日志，或者每个epoch结束记录一次日志
         self.logger = get_logger(os.path.join(self.log_dir, 'train.log'), log_info)
 
     def _train(self):
@@ -87,7 +88,7 @@ class ImageClassifier():
             net = self.model_curriculum(self.net)  # curriculum part
             net.train()
 
-            steps_done_epoch = 0
+            steps_done_epoch = 0#用来算每个epoch的平均损失
             if self.algorithm_name == 'adaptive':
                 num_steps = 0 #训练集的step(batch)数量，因为adaptive算法每个batch的训练集大小不一样
                 step = 0      #已经训练的step（batch)数量
@@ -113,17 +114,21 @@ class ImageClassifier():
                     _, predicted = outputs.max(dim=1)
                     correct += predicted.eq(labels).sum().item()
                     total += labels.shape[0]
+
                     step += 1
                     steps_done_epoch = step
 
+                    #每训练50个batch记录一次日志，或者每个epoch结束记录一次日志
                     if step % self.batch_log_interval == 0 or step == num_steps:
-                        steps_done = step
+                        steps_done = step#用来算每个inv（50个batch)的平均损失
                         self.logger.info(
                             '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
                             % (epoch + 1, steps_done, num_steps,
                                correct / total, train_loss / steps_done))
+                        
+            #非adaptive算法：每个epoch的训练集大小不变，可以直接用for循环迭代训练集
             else:
-                loader = self.data_curriculum(self.train_loader)  # curriculum part #非adaptive算法每个epoch的训练集大小不变，可以直接用for循环迭代训练集
+                loader = self.data_curriculum(self.train_loader)  # curriculum part 
                 num_steps = len(loader)
                 for step, data in enumerate(loader):
                     inputs = data[0].to(self.device)
@@ -145,7 +150,8 @@ class ImageClassifier():
                     steps_done_epoch = step + 1
 
                     if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
-                        steps_done = step + 1
+                    #因为for循环的step是从0开始的，所以要加1才能正确记录日志
+                        steps_done = step + 1#用来算每个inv（50个batch)的平均损失
                         self.logger.info(
                             '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
                             % (epoch + 1, steps_done, num_steps,
