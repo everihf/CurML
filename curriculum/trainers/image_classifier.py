@@ -31,12 +31,12 @@ class ImageClassifier():
             get_dataset_with_noise('./data', data_name)
 
         self.train_loader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=100, shuffle=True, num_workers=8, pin_memory=True)
+            train_dataset, batch_size=100, shuffle=True, num_workers=2, pin_memory=True)
 
         self.valid_loader = torch.utils.data.DataLoader(
-            valid_dataset, batch_size=100, shuffle=False, num_workers=8, pin_memory=True)
+            valid_dataset, batch_size=100, shuffle=False, num_workers=2, pin_memory=True)
         self.test_loader = torch.utils.data.DataLoader(
-            test_dataset, batch_size=100, shuffle=False, num_workers=8, pin_memory=True)
+            test_dataset, batch_size=100, shuffle=False, num_workers=2, pin_memory=True)
 
         self.data_prepare(self.train_loader)
 
@@ -156,6 +156,7 @@ class ImageClassifier():
                 '[%3d]  Train data = %6d  Train Acc = %.4f  Loss = %.4f  Time = %.2f'
                 % (epoch + 1, total, correct / total, train_loss / max(steps_done_epoch, 1), time.time() - t))
 
+            #验证集评估模型性能（每个epoch结束后），并保存最佳模型
             if (epoch + 1) % self.log_interval == 0:
                 valid_acc = self._valid(self.valid_loader)
                 if valid_acc > best_acc:
@@ -184,7 +185,7 @@ class ImageClassifier():
     def fit(self):
         set_random(self.random_seed)
         self._train()
-#评估：验证集，测试集
+    #评估：验证集，测试集
     def evaluate(self, net_dir=None):
         self._load_best_net(net_dir)
         valid_acc = self._valid(self.valid_loader)
