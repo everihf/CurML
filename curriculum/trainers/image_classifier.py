@@ -89,8 +89,8 @@ class ImageClassifier():
 
             steps_done_epoch = 0
             if self.algorithm_name == 'adaptive':
-                step = 0
-                num_steps = 0
+                num_steps = 0 #训练集的step(batch)数量，因为adaptive算法每个batch的训练集大小不一样
+                step = 0      #已经训练的step（batch)数量
                 while True:#因为adaptive下每个batch的训练集大小不一样，所以不能直接用for循环迭代训练集，而是用while循环，每个batch结束后重新计算训练集大小，并判断是否结束该epoch的训练
                     loader = self.data_curriculum(self.train_loader)  # curriculum part
                     num_steps = len(loader)#该epoch的训练集大小，课程学习的epoch不一定是全训练集！

@@ -46,7 +46,7 @@ class Adaptive(BaseCL):
         self.critertion = criterion
         self.total_epoch = epochs
     
-
+#按照课程抓取数据，并且在每个inv(=50个batch)结束后更新难度！
     def data_curriculum(self, loader):
         if self.epoch == 0 and self.batch == 0:
             self.pretrained_model.to(self.device)
@@ -58,12 +58,12 @@ class Adaptive(BaseCL):
             self._set_initial_difficulty()
             self.pretrained_difficulty = self.difficulty
 
-
+        #训练集扩张公式
         self.epoch_size = self.data_size * min(
             self.pace_p * (self.pace_q ** int(math.floor(self.batch / self.pace_r))),
             1)
         self.epoch_size = int(self.epoch_size)
-        #扩张公式
+        
         data_sort = torch.argsort(self.difficulty)
         self.data_indice = data_sort[0 : self.epoch_size]
         dataset = Subset(self.dataset, self.data_indice)
@@ -73,6 +73,7 @@ class Adaptive(BaseCL):
         if self.batch % self.n_batches == 0:
             self.epoch += 1
 
+        #更新难度,每隔一个inv(50个batch)
         if self.batch % self.inv == 0:
             self._difficulty_measurer()
 
