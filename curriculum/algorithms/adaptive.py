@@ -82,8 +82,20 @@ class Adaptive(BaseCL):
                 self.gamma = max(self.bottom_gamma, self.gamma - self.gamma_decay)
 
         return dataloader
-        
     
+    def _difficulty_measurer(self):
+    
+        current_difficulty = torch.Tensor().to(self.device)
+
+        for step, data in enumerate(self.dataloader):
+            with torch.no_grad():
+                outputs = self.model(data[0].to(self.device))
+            loss = self.crossEntrophy(outputs, data[1].to(self.device)).detach()
+            current_difficulty = torch.cat((current_difficulty, loss), 0)
+        
+        self.difficulty = (1 - self.alpha) * self.difficulty + self.alpha * current_difficulty
+        #自适应更新难度！    
+        
     def loss_curriculum(self, criterion, outputs, labels, indices):
         losses = torch.mean(criterion(outputs, labels))
         epoch_pretrained_output = self.pretrained_output[indices.long()]
@@ -113,18 +125,7 @@ class Adaptive(BaseCL):
             self.difficulty = torch.cat((self.difficulty, loss), 0)
 
 
-    def _difficulty_measurer(self):
-    
-        current_difficulty = torch.Tensor().to(self.device)
 
-        for step, data in enumerate(self.dataloader):
-            with torch.no_grad():
-                outputs = self.model(data[0].to(self.device))
-            loss = self.crossEntrophy(outputs, data[1].to(self.device)).detach()
-            current_difficulty = torch.cat((current_difficulty, loss), 0)
-        
-        self.difficulty = (1 - self.alpha) * self.difficulty + self.alpha * current_difficulty
-        #自适应更新难度！
 
 
 class AdaptiveTrainer(BaseTrainer):
