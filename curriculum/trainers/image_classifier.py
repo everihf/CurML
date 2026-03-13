@@ -90,10 +90,10 @@ class ImageClassifier():
 
             steps_done_epoch = 0#用来算每个epoch的平均损失
             if self.algorithm_name == 'adaptive':
-                adaptive_algo = getattr(self.data_curriculum, '__self__', None)
+                adaptive_algo = getattr(self.data_curriculum, '__self__',None )#default=None
 
                 # 课程已经扩展到全数据集后，退化为普通for循环，避免每个step重复重建loader。
-                if getattr(adaptive_algo, 'curriculum_finished', False):
+                if getattr(adaptive_algo, 'curriculum_finished', False):#default=False
                     # 课程结束后直接按常规方式遍历训练集，不再调用adaptive的数据抓取逻辑。
                     loader = self.train_loader
                     num_steps = len(loader)

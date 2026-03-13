@@ -92,8 +92,8 @@ class Adaptive(BaseCL):
         if self.batch % self.n_batches == 0:
             self.epoch += 1
 
-        #更新难度,每隔一个inv(50个batch)
-        if self.batch % self.inv == 0:
+        #更新难度,每隔一个inv(50个batch),并且要在500次迭代之后才更新难度！
+        if self.batch % self.inv == 0 and (self.batch+1)>500:
             self._difficulty_measurer()
 
             # gradually reduce lambda1 which is the balancing parameter controling how much the knowledge learned from the pretrained model
