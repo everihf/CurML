@@ -23,10 +23,10 @@ def main() -> None:
     #
     parser.add_argument('--alpha', type=float, default=-0.01)
     #
-    parser.add_argument('--gamma', type=float, default=0.01)
+    parser.add_argument('--lambda1', type=float, default=0.01)
     #之前默认是0.1，但是ACL论文推荐0.01
-    parser.add_argument('--gamma_decay', type=float, default=None)
-    parser.add_argument('--bottom_gamma', type=float, default=0.1)
+    parser.add_argument('--lambda1_decay', type=float, default=None)
+    parser.add_argument('--bottom_lambda1', type=float, default=0.1)
     parser.add_argument('--teacher_dir', type=str, default='runs/teacher_model')
     #添加教师模型！
     args = parser.parse_args()
@@ -58,9 +58,9 @@ def main() -> None:
         pace_r=args.pace_r,
         inv=args.inv,
         alpha=args.alpha,
-        gamma=args.gamma,
-        gamma_decay=args.gamma_decay,
-        bottom_gamma=args.bottom_gamma,
+        lambda1=args.lambda1,
+        lambda1_decay=args.lambda1_decay,
+        bottom_lambda1=args.bottom_lambda1,
         pretrained_net=teacher_net,
     )
     trainer.fit()

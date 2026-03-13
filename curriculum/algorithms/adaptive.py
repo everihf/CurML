@@ -12,7 +12,7 @@ class Adaptive(BaseCL):
     Adaptive Curriculum Learning. https://openaccess.thecvf.com/content/ICCV2021/papers/Kong_Adaptive_Curriculum_Learning_ICCV_2021_paper.pdf
     """
     def __init__(self, num_classes, pace_p, pace_q, pace_r, inv,
-                 alpha, gamma, gamma_decay, bottom_gamma, pretrained_net):
+                 alpha, lambda1, lambda1_decay, bottom_lambda1, pretrained_net):
         super(Adaptive, self).__init__()
 
         self.name = 'adaptive'
@@ -25,9 +25,9 @@ class Adaptive(BaseCL):
         self.pace_r = pace_r
         self.inv = inv
         self.alpha = alpha
-        self.gamma = gamma
-        self.gamma_decay = gamma_decay
-        self.bottom_gamma = bottom_gamma
+        self.lambda1 = lambda1
+        self.lambda1_decay = lambda1_decay
+        self.bottom_lambda1 = bottom_lambda1
         self.num_classes = num_classes
         self.pretrained_model = pretrained_net
 
@@ -77,9 +77,9 @@ class Adaptive(BaseCL):
         if self.batch % self.inv == 0:
             self._difficulty_measurer()
 
-            # gradually reduce gamma which is the balancing parameter controling how much the knowledge learned from the pretrained model
-            if self.gamma_decay is not None:
-                self.gamma = max(self.bottom_gamma, self.gamma - self.gamma_decay)
+            # gradually reduce lambda1 which is the balancing parameter controling how much the knowledge learned from the pretrained model
+            if self.lambda1_decay is not None:
+                self.lambda1 = max(self.bottom_lambda1, self.lambda1 - self.lambda1_decay)
 
         return dataloader
     
@@ -106,9 +106,8 @@ class Adaptive(BaseCL):
         output = F.softmax(outputs, dim=1)
         kl_divergence = self.KLloss(output, epoch_pretrained_output)
 
-        losses = losses + self.gamma * kl_divergence
+        losses = losses + self.lambda1 * kl_divergence
         #目标函数：减少损失和增加与预训练模型输出的相似度（蒸馏）！！！
-        #原文这里是L不是γ！
         return losses      
 
 
@@ -131,10 +130,10 @@ class Adaptive(BaseCL):
 class AdaptiveTrainer(BaseTrainer):
     def __init__(self, data_name, net_name, device_name, num_epochs, random_seed,
                  num_classes, pace_p, pace_q, pace_r, inv,
-                 alpha, gamma, gamma_decay, bottom_gamma, pretrained_net):
+                 alpha, lambda1, lambda1_decay, bottom_lambda1, pretrained_net):
         
         cl = Adaptive(num_classes, pace_p, pace_q, pace_r, inv,
-                 alpha, gamma, gamma_decay, bottom_gamma, pretrained_net)
+                 alpha, lambda1, lambda1_decay, bottom_lambda1, pretrained_net)
 
         super(AdaptiveTrainer, self).__init__(
             data_name, net_name, device_name, num_epochs, random_seed, cl)
