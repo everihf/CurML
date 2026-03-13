@@ -64,6 +64,7 @@ class Adaptive(BaseCL):
             1)
         self.epoch_size = int(self.epoch_size)
         
+        #根据难度排序，选择前epoch_size个数据进行训练！
         data_sort = torch.argsort(self.difficulty)
         self.data_indice = data_sort[0 : self.epoch_size]
         dataset = Subset(self.dataset, self.data_indice)
@@ -105,6 +106,7 @@ class Adaptive(BaseCL):
 
         output = F.softmax(outputs, dim=1)
         kl_divergence = self.KLloss(output, epoch_pretrained_output)
+        #把预训练模型的输出当作‘伪标签’，计算KL散度，蒸馏模型！
 
         losses = losses + self.lambda1 * kl_divergence
         #目标函数：减少损失和增加与预训练模型输出的相似度（蒸馏）！！！
