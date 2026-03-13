@@ -64,8 +64,7 @@ class BaseCL():
             shuffle=True,
             num_workers=loader.num_workers,
             pin_memory=loader.pin_memory,
-            drop_last=loader.drop_last,
-            persistent_workers=getattr(loader, 'persistent_workers', False),
+            
         )
 
 

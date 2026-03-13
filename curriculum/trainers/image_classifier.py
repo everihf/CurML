@@ -103,6 +103,7 @@ class ImageClassifier():
                         adaptive_algo.dataset,
                         batch_size=self.train_loader.batch_size,
                         shuffle=True,
+                        #注意num_workers会影响训练时间（载入数据）
                         num_workers=self.train_loader.num_workers,
                         pin_memory=self.train_loader.pin_memory,
                     )
