@@ -64,6 +64,23 @@ class Adaptive(BaseCL):
             1)
         self.epoch_size = int(self.epoch_size)
         
+        #当课程已经扩展到全训练集(如 CIFAR-10 的 45000 样本)时，
+        #跳过排序、Subset 构建和难度更新，直接返回完整训练集。
+        if self.epoch_size >= self.data_size:
+            self.epoch_size = self.data_size
+            self.data_indice = torch.arange(self.data_size)
+            dataloader = DataLoader(self.dataset, self.batch_size, shuffle=True)
+
+            self.batch += 1
+            if self.batch % self.n_batches == 0:
+                self.epoch += 1
+
+            #保持lambda1的更新节奏，但不再执行全量difficulty测量
+            if self.batch % self.inv == 0 and self.lambda1_decay is not None:
+                self.lambda1 = max(self.bottom_lambda1, self.lambda1 - self.lambda1_decay)
+
+            return dataloader
+
         #根据难度排序，选择前epoch_size个数据进行训练！
         data_sort = torch.argsort(self.difficulty)
         self.data_indice = data_sort[0 : self.epoch_size]
