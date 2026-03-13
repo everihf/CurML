@@ -70,7 +70,15 @@ class Adaptive(BaseCL):
         #跳过排序、Subset 构建和难度更新，直接返回完整训练集。
         if self.epoch_size == self.data_size:
             self.curriculum_finished = True
-            dataloader = DataLoader(self.dataset, self.batch_size, shuffle=True)
+            dataloader = DataLoader(
+                self.dataset,
+                batch_size=loader.batch_size,
+                shuffle=True,
+                num_workers=loader.num_workers,
+                pin_memory=loader.pin_memory,
+                drop_last=loader.drop_last,
+                persistent_workers=getattr(loader, 'persistent_workers', False),
+            )
 
             self.batch += 1
             if self.batch % self.n_batches == 0:
@@ -86,7 +94,15 @@ class Adaptive(BaseCL):
         data_sort = torch.argsort(self.difficulty)
         self.data_indice = data_sort[0 : self.epoch_size]
         dataset = Subset(self.dataset, self.data_indice)
-        dataloader = DataLoader(dataset, self.batch_size, shuffle=True)
+        dataloader = DataLoader(
+            dataset,
+            batch_size=loader.batch_size,
+            shuffle=True,
+            num_workers=loader.num_workers,
+            pin_memory=loader.pin_memory,
+            drop_last=loader.drop_last,
+            persistent_workers=getattr(loader, 'persistent_workers', False),
+        )
 
         self.batch += 1
         if self.batch % self.n_batches == 0:
