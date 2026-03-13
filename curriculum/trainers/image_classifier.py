@@ -1,6 +1,7 @@
 import os
 import time
 import torch
+from torch.utils.data import DataLoader
 
 from ..datasets import get_dataset_with_noise
 from ..backbones import get_net
@@ -95,7 +96,16 @@ class ImageClassifier():
                 # 课程已经扩展到全数据集后，退化为普通for循环，避免每个step重复重建loader。
                 if getattr(adaptive_algo, 'curriculum_finished', False):#default=False
                     # 课程结束后直接按常规方式遍历训练集，不再调用adaptive的数据抓取逻辑。
-                    loader = self.train_loader
+                    # 注意：adaptive 的 loss 依赖样本原始索引（data[2]），因此必须使用 CLDataset。
+                    if adaptive_algo is None or not hasattr(adaptive_algo, 'dataset'):
+                        raise RuntimeError('Adaptive curriculum requires CLDataset with sample indices.')
+                    loader = DataLoader(
+                        adaptive_algo.dataset,
+                        batch_size=self.train_loader.batch_size,
+                        shuffle=True,
+                        num_workers=self.train_loader.num_workers,
+                        pin_memory=self.train_loader.pin_memory,
+                    )
                     num_steps = len(loader)
                     for step, data in enumerate(loader):
                         inputs = data[0].to(self.device)

@@ -129,6 +129,8 @@ class Adaptive(BaseCL):
         
     def loss_curriculum(self, criterion, outputs, labels, indices):
         losses = torch.mean(criterion(outputs, labels))
+        if indices is None:
+            raise RuntimeError('Adaptive loss requires sample indices from CLDataset.')
         epoch_pretrained_output = self.pretrained_output[indices.long()]
         epoch_pretrained_output = epoch_pretrained_output.view(-1, self.num_classes)
 
