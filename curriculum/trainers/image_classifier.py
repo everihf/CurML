@@ -90,41 +90,78 @@ class ImageClassifier():
 
             steps_done_epoch = 0#用来算每个epoch的平均损失
             if self.algorithm_name == 'adaptive':
-                num_steps = 0 #训练集的step(batch)数量，因为adaptive算法每个batch的训练集大小不一样
-                step = 0      #已经训练的step（batch)数量
-                while True:#因为adaptive下每个batch的训练集大小不一样，所以不能直接用for循环迭代训练集，而是用while循环，每个batch结束后重新计算训练集大小，并判断是否结束该epoch的训练
-                    loader = self.data_curriculum(self.train_loader)  # curriculum part
-                    num_steps = len(loader)#该epoch的训练集大小，课程学习的epoch不一定是全训练集！
-                    if step >= num_steps:#如果当前batch的训练集大小已经超过了该epoch的训练集大小，就结束该epoch的训练，进入下一个epoch
-                        break
+                adaptive_algo = getattr(self.data_curriculum, '__self__', None)
 
-                    data = next(iter(loader))
-                    inputs = data[0].to(self.device)
-                    labels = data[1].to(self.device)
-                    indices = data[2].to(self.device)
+                # 课程已经扩展到全数据集后，退化为普通for循环，避免每个step重复重建loader。
+                if getattr(adaptive_algo, 'curriculum_finished', False):
+                    # 课程结束后直接按常规方式遍历训练集，不再调用adaptive的数据抓取逻辑。
+                    loader = self.train_loader
+                    num_steps = len(loader)
+                    for step, data in enumerate(loader):
+                        inputs = data[0].to(self.device)
+                        labels = data[1].to(self.device)
+                        indices = data[2].to(self.device)
 
-                    self.optimizer.zero_grad()
-                    outputs = net(inputs)
-                    loss = self.loss_curriculum(  # curriculum part
-                        self.criterion, outputs, labels, indices)
-                    loss.backward()
-                    self.optimizer.step()
+                        self.optimizer.zero_grad()
+                        outputs = net(inputs)
+                        loss = self.loss_curriculum(  # curriculum part
+                            self.criterion, outputs, labels, indices)
+                        loss.backward()
+                        self.optimizer.step()
 
-                    train_loss += loss.item()
-                    _, predicted = outputs.max(dim=1)
-                    correct += predicted.eq(labels).sum().item()
-                    total += labels.shape[0]
+                        if adaptive_algo is not None and hasattr(adaptive_algo, 'update_after_curriculum_finished_step'):
+                            adaptive_algo.update_after_curriculum_finished_step()
 
-                    step += 1
-                    steps_done_epoch = step
+                        train_loss += loss.item()
+                        _, predicted = outputs.max(dim=1)
+                        correct += predicted.eq(labels).sum().item()
+                        total += labels.shape[0]
 
-                    #每训练50个batch记录一次日志，或者每个epoch结束记录一次日志
-                    if step % self.batch_log_interval == 0 or step == num_steps:
-                        steps_done = step#用来算每个inv（50个batch)的平均损失
-                        self.logger.info(
-                            '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
-                            % (epoch + 1, steps_done, num_steps,
-                               correct / total, train_loss / steps_done))
+                        steps_done_epoch = step + 1
+
+                        if (step + 1) % self.batch_log_interval == 0 or (step + 1) == num_steps:
+                        #因为for循环的step是从0开始的，所以要加1才能正确记录日志
+                            steps_done = step + 1#用来算每个inv（50个batch)的平均损失
+                            self.logger.info(
+                                '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
+                                % (epoch + 1, steps_done, num_steps,
+                                   correct / total, train_loss / steps_done))
+                else:
+                    num_steps = 0 #训练集的step(batch)数量，因为adaptive算法每个batch的训练集大小不一样
+                    step = 0      #已经训练的step（batch)数量
+                    while True:#因为adaptive下每个batch的训练集大小不一样，所以不能直接用for循环迭代训练集，而是用while循环，每个batch结束后重新计算训练集大小，并判断是否结束该epoch的训练
+                        loader = self.data_curriculum(self.train_loader)  # curriculum part
+                        num_steps = len(loader)#该epoch的训练集大小，课程学习的epoch不一定是全训练集！
+                        if step >= num_steps:#如果当前batch的训练集大小已经超过了该epoch的训练集大小，就结束该epoch的训练，进入下一个epoch
+                            break
+
+                        data = next(iter(loader))
+                        inputs = data[0].to(self.device)
+                        labels = data[1].to(self.device)
+                        indices = data[2].to(self.device)
+
+                        self.optimizer.zero_grad()
+                        outputs = net(inputs)
+                        loss = self.loss_curriculum(  # curriculum part
+                            self.criterion, outputs, labels, indices)
+                        loss.backward()
+                        self.optimizer.step()
+
+                        train_loss += loss.item()
+                        _, predicted = outputs.max(dim=1)
+                        correct += predicted.eq(labels).sum().item()
+                        total += labels.shape[0]
+
+                        step += 1
+                        steps_done_epoch = step
+
+                        #每训练50个batch记录一次日志，或者每个epoch结束记录一次日志
+                        if step % self.batch_log_interval == 0 or step == num_steps:
+                            steps_done = step#用来算每个inv（50个batch)的平均损失
+                            self.logger.info(
+                                '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
+                                % (epoch + 1, steps_done, num_steps,
+                                   correct / total, train_loss / steps_done))
                         
             #非adaptive算法：每个epoch的训练集大小不变，可以直接用for循环迭代训练集
             else:

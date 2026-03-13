@@ -38,6 +38,8 @@ class Adaptive(BaseCL):
         self.data_size = len(self.dataset)
         self.batch_size = loader.batch_size
         self.n_batches = (self.data_size - 1) // self.batch_size + 1
+        # 课程是否已经扩展到全训练集。
+        self.curriculum_finished = False
 
 
     def model_prepare(self, net, device, epochs, criterion, optimizer, lr_scheduler):
@@ -67,6 +69,7 @@ class Adaptive(BaseCL):
         #当课程已经扩展到全训练集(如 CIFAR-10 的 45000 样本)时，
         #跳过排序、Subset 构建和难度更新，直接返回完整训练集。
         if self.epoch_size == self.data_size:
+            self.curriculum_finished = True
             dataloader = DataLoader(self.dataset, self.batch_size, shuffle=True)
 
             self.batch += 1
@@ -98,7 +101,19 @@ class Adaptive(BaseCL):
                 self.lambda1 = max(self.bottom_lambda1, self.lambda1 - self.lambda1_decay)
 
         return dataloader
-    
+
+    def update_after_curriculum_finished_step(self):
+        """在课程结束后的常规for-loop中，保持batch/epoch与lambda1更新节奏。"""
+        if not self.curriculum_finished:
+            return
+
+        self.batch += 1
+        if self.batch % self.n_batches == 0:
+            self.epoch += 1
+
+        if self.batch % self.inv == 0 and self.lambda1_decay is not None:
+            self.lambda1 = max(self.bottom_lambda1, self.lambda1 - self.lambda1_decay)
+
     def _difficulty_measurer(self):
     
         current_difficulty = torch.Tensor().to(self.device)
