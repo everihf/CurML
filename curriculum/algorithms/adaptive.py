@@ -66,15 +66,15 @@ class Adaptive(BaseCL):
             1)
         self.epoch_size = int(self.epoch_size)
         
-        #当课程已经扩展到全训练集(如 CIFAR-10 的 45000 样本)时，
-        #跳过排序、Subset 构建和难度更新，直接返回完整训练集。
+        # #当课程已经扩展到全训练集(如 CIFAR-10 的 45000 样本)时，
+        # #跳过排序、Subset 构建和难度更新，直接返回完整训练集。
         if self.epoch_size == self.data_size:
             self.curriculum_finished = True
             dataloader = DataLoader(
                 self.dataset,
                 batch_size=loader.batch_size,
                 shuffle=True,
-                num_workers=loader.num_workers,
+                num_workers=0,
                 pin_memory=loader.pin_memory,
             
             )
@@ -91,13 +91,20 @@ class Adaptive(BaseCL):
 
         #根据难度排序，选择前epoch_size个数据进行训练！
         data_sort = torch.argsort(self.difficulty)
-        self.data_indice = data_sort[0 : self.epoch_size]
+        # Subset/DataLoader worker processes 只能接收CPU索引。
+        # 回到CPU以避免在子工作进程中初始化CUDA。
+        self.data_indice = data_sort[:self.epoch_size].detach().cpu().tolist()
+        #.detach().cpu()
         dataset = Subset(self.dataset, self.data_indice)
+        #多 worker 的收益建立在：同一个 DataLoader 会持续迭代很多 batch，worker 能持续预取。
+        #但你这里每次几乎只拿一个 batch 就丢掉 loader，worker 启动/同步/退出开销被无限放大，所以很慢。
+        #Adaptive 当前实现会高频重建 DataLoader（几乎每个 step 一次）；在这种模式下继续用多 worker，会产生非常大的 worker 启停开销，
+        #训练时间会被 I/O/进程管理吞掉。为此我在 Adaptive.data_curriculum 里把这两处动态构建的 DataLoader 的 num_workers 固定为 0，避免重复拉起 worker 导致的吞吐下降。
         dataloader = DataLoader(
             dataset,
             batch_size=loader.batch_size,
             shuffle=True,
-            num_workers=loader.num_workers,
+            num_workers=0,
             pin_memory=loader.pin_memory,
             
         )
@@ -113,6 +120,9 @@ class Adaptive(BaseCL):
             # gradually reduce lambda1 which is the balancing parameter controling how much the knowledge learned from the pretrained model
             if self.lambda1_decay is not None:
                 self.lambda1 = max(self.bottom_lambda1, self.lambda1 - self.lambda1_decay)
+
+        # if self.epoch_size == self.data_size:
+        #     self.curriculum_finished = True
 
         return dataloader
 
