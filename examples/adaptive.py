@@ -27,7 +27,7 @@ def main() -> None:
     #之前默认是0.1，但是ACL论文推荐0.01
     parser.add_argument('--lambda1_decay', type=float, default=None)
     parser.add_argument('--bottom_lambda1', type=float, default=0.1)
-    parser.add_argument('--teacher_dir', type=str, default='runs/teacher_model')
+    parser.add_argument('--teacher_dir', type=str, default=None)#例如'runs/teacher_model'
     #添加教师模型！
     args = parser.parse_args()
 
@@ -39,9 +39,10 @@ def main() -> None:
         random_seed=42,
     )
     
+    #若没有教师模型，就先训练一个教师模型！
     if args.teacher_dir is None:
         pretrainer.fit()
-    pretrainer.evaluate(args.teacher_dir)
+    pretrainer.evaluate(args.teacher_dir)#评估教师模型的性能
 
     teacher_net = pretrainer.export(args.teacher_dir)
     #将该文件夹下的预训练模型导出为teacher_net
@@ -62,6 +63,7 @@ def main() -> None:
         lambda1_decay=args.lambda1_decay,
         bottom_lambda1=args.bottom_lambda1,
         pretrained_net=teacher_net,
+        #这里不要修改，在前面参数设置添加教师模型
     )
     trainer.fit()
     trainer.evaluate()
