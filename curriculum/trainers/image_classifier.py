@@ -137,6 +137,8 @@ class ImageClassifier():
                                 '[%3d]  Step %4d/%4d  Train Acc = %.4f  Loss = %.4f'
                                 % (epoch + 1, steps_done, num_steps,
                                    correct / total, train_loss / steps_done))
+                            
+                #adaptive算法：训练没扩展到全数据集的情况。调用adaptive的数据抓取逻辑，每个batch的训练集大小不一样。
                 else:
                     num_steps = 0 #训练集的step(batch)数量，因为adaptive算法每个batch的训练集大小不一样
                     step = 0      #已经训练的step（batch)数量
