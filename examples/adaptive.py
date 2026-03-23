@@ -27,7 +27,7 @@ def main() -> None:
     #之前默认是0.1，但是ACL论文推荐0.01
     parser.add_argument('--lambda1_decay', type=float, default=None)
     parser.add_argument('--bottom_lambda1', type=float, default=0.1)
-    parser.add_argument('--teacher_dir', type=str, default='runs/teacher_model1.0')#例如'runs/teacher_model'
+    parser.add_argument('--teacher_dir', type=str, default=None)#例如'runs/teacher_model1.0'
     #添加教师模型！
     args = parser.parse_args()
 
