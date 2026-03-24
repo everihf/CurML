@@ -32,12 +32,12 @@ class ImageClassifier():
             get_dataset_with_noise('./data', data_name)
 
         self.train_loader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=100, shuffle=True, num_workers=2, pin_memory=True)
+            train_dataset, batch_size=128, shuffle=True, num_workers=2, pin_memory=True)
 
         self.valid_loader = torch.utils.data.DataLoader(
-            valid_dataset, batch_size=100, shuffle=False, num_workers=2, pin_memory=True)
+            valid_dataset, batch_size=128, shuffle=False, num_workers=2, pin_memory=True)
         self.test_loader = torch.utils.data.DataLoader(
-            test_dataset, batch_size=100, shuffle=False, num_workers=2, pin_memory=True)
+            test_dataset, batch_size=128, shuffle=False, num_workers=2, pin_memory=True)
 
         self.data_prepare(self.train_loader)
 
